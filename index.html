@@ -12,11 +12,9 @@
 
 	</body>
 	<script>
-		// function openwebrx_init()
 		var ws = open_websocket("ws://kiwisdr.hirokinet.com:8074/1529052345392/SND");
 
-		window.setTimeout(function(){
-			// waterfall_init();
+		window.setTimeout(function() {			
 			audio_preinit();
 			audio_init();
 			ws.send("SET AR OK in=12000 out=48000");
@@ -33,11 +31,6 @@
 			ws.send("SET nb=0 th=50");
 			ws.send("SET agc=1 hang=0 thresh=0 slope=0 decay=0 manGain=0");
 			ws.send("SET agc=1 hang=0 thresh=-100 slope=0 decay=0 manGain=50");
-			// ws.send("");
-			// ws.send("");
-			// ws.send("");
 		}, 3000);
-
-
 	</script>
 </html>

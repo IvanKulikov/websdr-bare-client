@@ -53,22 +53,6 @@ var waterfall_queue = [];
 var waterfall_timer;
 var secondary_fft_size;
 
-/*function fade(something,from,to,time_ms,fps)
-{
-	something.style.opacity=from;
-	something.fade_i=0;
-	n_of_iters=time_ms/(1000/fps);
-	change=(to-from)/(n_of_iters-1);
-
-	something.fade_timer=window.setInterval(
-		function(){
-			if(something.fade_i++<n_of_iters)
-				something.style.opacity=parseFloat(something.style.opacity)+change;
-			else
-				{something.style.opacity=to; window.clearInterval(something.fade_timer); }
-		},1000/fps);
-}*/
-
 var rx_photo_state=1;
 
 function e(what) { return document.getElementById(what); }
@@ -123,31 +107,9 @@ function style_value(of_what,which)
 	else if (window.getComputedStyle) return document.defaultView.getComputedStyle(of_what,null).getPropertyValue(which);
 }
 
-function updateVolume()
+function updateVolume(n)
 {
-	volume = parseFloat(e("openwebrx-panel-volume").value) / 100;
-}
-
-function toggleMute()
-{
-	if (mute) {
-		mute = false;
-		e("openwebrx-mute-on").id="openwebrx-mute-off";
-		e("openwebrx-mute-img").src="gfx/openwebrx-speaker.png";
-		e("openwebrx-panel-volume").disabled=false;
-		e("openwebrx-panel-volume").style.opacity=1.0;
-		e("openwebrx-panel-volume").value = volumeBeforeMute;
-	} else {
-		mute = true;
-		e("openwebrx-mute-off").id="openwebrx-mute-on";
-		e("openwebrx-mute-img").src="gfx/openwebrx-speaker-muted.png";
-		e("openwebrx-panel-volume").disabled=true;
-		e("openwebrx-panel-volume").style.opacity=0.5;
-		volumeBeforeMute = e("openwebrx-panel-volume").value;
-		e("openwebrx-panel-volume").value=0;
-	}
-
-	updateVolume();
+	volume = n / 100;
 }
 
 function zoomInOneStep ()  { zoom_set(zoom_level+1); }
@@ -231,48 +193,6 @@ function typeInAnimation(element,timeout,what,onFinish)
 	window.setTimeout(	function(){typeInAnimation(element,timeout,what.substring(1),onFinish);}, timeout );
 }
 
-
-
-// ========================================================
-// =================  ANIMATION ROUTINES  =================
-// ========================================================
-
-function animate(object,style_name,unit,from,to,accel,time_ms,fps,to_exec)
-{
-	//console.log(object.className);
-	if(typeof to_exec=="undefined") to_exec=0;
-	object.style[style_name]=from.toString()+unit;
-	object.anim_i=0;
-	n_of_iters=time_ms/(1000/fps);
-	change=(to-from)/(n_of_iters);
-	if(typeof object.anim_timer!="undefined") { window.clearInterval(object.anim_timer);  }
-	object.anim_timer=window.setInterval(
-		function(){
-			if(object.anim_i++<n_of_iters)
-			{
-				if(accel==1) object.style[style_name]=(parseFloat(object.style[style_name])+change).toString()+unit;
-				else
-				{
-					remain=parseFloat(object.style[style_name])-to;
-					if(Math.abs(remain)>9||unit!="px") new_val=(to+accel*remain);
-					else {if(Math.abs(remain)<2) new_val=to;
-					else new_val=to+remain-(remain/Math.abs(remain));}
-					object.style[style_name]=new_val.toString()+unit;
-				}
-			}
-			else
-				{object.style[style_name]=to.toString()+unit; window.clearInterval(object.anim_timer); delete object.anim_timer; }
-			if(to_exec!=0) to_exec();
-		},1000/fps);
-}
-
-function animate_to(object,style_name,unit,to,accel,time_ms,fps,to_exec)
-{
-	from=parseFloat(style_value(object,style_name));
-	animate(object,style_name,unit,from,to,accel,time_ms,fps,to_exec);
-}
-
-
 // ========================================================
 // ================  DEMODULATOR ROUTINES  ================
 // ========================================================
@@ -285,67 +205,6 @@ function demodulators_get_next_color()
 {
 	if(demodulator_color_index>=demodulator_colors.length) demodulator_color_index=0;
 	return(demodulator_colors[demodulator_color_index++]);
-}
-
-function demod_envelope_draw(range, from, to, color, line)
-{  //                                               ____
-	// Draws a standard filter envelope like this: _/    \_
-   // Parameters are given in offset frequency (Hz).
-   // Envelope is drawn on the scale canvas.
-	// A "drag range" object is returned, containing information about the draggable areas of the envelope
-	// (beginning, ending and the line showing the offset frequency).
-	if(typeof color == "undefined") color="#ffff00"; //yellow
-	env_bounding_line_w=5;   //
-	env_att_w=5;             //     _______   ___env_h2 in px   ___|_____
-	env_h1=17;               //   _/|      \_ ___env_h1 in px _/   |_    \_
-	env_h2=5;                //   |||env_att_line_w                |_env_lineplus
-	env_lineplus=1;          //   ||env_bounding_line_w
-	env_line_click_area=6;
-	//range=get_visible_freq_range();
-	from_px=scale_px_from_freq(from,range);
-	to_px=scale_px_from_freq(to,range);
-	if(to_px<from_px) /* swap'em */ { temp_px=to_px; to_px=from_px; from_px=temp_px; }
-
-	/*from_px-=env_bounding_line_w/2;
-	to_px+=env_bounding_line_w/2;*/
-	from_px-=(env_att_w+env_bounding_line_w);
-	to_px+=(env_att_w+env_bounding_line_w);
-	// do drawing:
-	scale_ctx.lineWidth=3;
-	scale_ctx.strokeStyle=color;
-	scale_ctx.fillStyle = color;
-	var drag_ranges={ envelope_on_screen: false, line_on_screen: false };
-	if(!(to_px<0||from_px>window.innerWidth)) // out of screen?
-	{
-		drag_ranges.beginning={x1:from_px, x2: from_px+env_bounding_line_w+env_att_w};
-		drag_ranges.ending={x1:to_px-env_bounding_line_w-env_att_w, x2: to_px};
-		drag_ranges.whole_envelope={x1:from_px, x2: to_px};
-		drag_ranges.envelope_on_screen=true;
-		scale_ctx.beginPath();
-		scale_ctx.moveTo(from_px,env_h1);
-		scale_ctx.lineTo(from_px+env_bounding_line_w, env_h1);
-		scale_ctx.lineTo(from_px+env_bounding_line_w+env_att_w, env_h2);
-		scale_ctx.lineTo(to_px-env_bounding_line_w-env_att_w, env_h2);
-		scale_ctx.lineTo(to_px-env_bounding_line_w, env_h1);
-		scale_ctx.lineTo(to_px, env_h1);
-		scale_ctx.globalAlpha = 0.3;
-		scale_ctx.fill();
-		scale_ctx.globalAlpha = 1;
-		scale_ctx.stroke();
-	}
-	if(typeof line != "undefined") // out of screen?
-	{
-		line_px=scale_px_from_freq(line,range);
-		if(!(line_px<0||line_px>window.innerWidth))
-		{
-			drag_ranges.line={x1:line_px-env_line_click_area/2, x2: line_px+env_line_click_area/2};
-			drag_ranges.line_on_screen=true;
-			scale_ctx.moveTo(line_px,env_h1+env_lineplus);
-			scale_ctx.lineTo(line_px,env_h2-env_lineplus);
-			scale_ctx.stroke();
-		}
-	}
-	return drag_ranges;
 }
 
 function demod_envelope_where_clicked(x, drag_ranges, key_modifiers)
@@ -542,7 +401,7 @@ function demodulator_default_analog(offset_frequency,subtype)
 			this.parent.offset_frequency=new_value;
 		}
 		//now do the actual modifications:
-		mkenvelopes(this.visible_range);
+		// mkenvelopes(this.visible_range);
 		this.parent.set();
 		//will have to change this when changing to multi-demodulator mode:
 		e("webrx-actual-freq").innerHTML=format_frequency("{x} MHz",center_freq+this.parent.offset_frequency,1e6,4);
@@ -551,7 +410,6 @@ function demodulator_default_analog(offset_frequency,subtype)
 
 	this.envelope.drag_end=function(x)
 	{ //in this demodulator we've already changed values in the drag_move() function so we shouldn't do too much here.
-		demodulator_buttons_update();
 		to_return=this.dragged_range!=demodulator.draggable_ranges.none; //this part is required for cliking anywhere on the scale to set offset
 		this.dragged_range=demodulator.draggable_ranges.none;
 		return to_return;
@@ -560,16 +418,6 @@ function demodulator_default_analog(offset_frequency,subtype)
 }
 
 demodulator_default_analog.prototype=new demodulator();
-
-function mkenvelopes(visible_range) //called from mkscale
-{
-	scale_ctx.clearRect(0,0,scale_ctx.canvas.width,22); //clear the upper part of the canvas (where filter envelopes reside)
-	for (var i=0;i<demodulators.length;i++)
-	{
-		demodulators[i].envelope.draw(visible_range);
-	}
-    if(demodulators.length) secondary_demod_waterfall_set_zoom(demodulators[0].low_cut, demodulators[0].high_cut);
-}
 
 function demodulator_remove(which)
 {
@@ -580,7 +428,7 @@ function demodulator_remove(which)
 function demodulator_add(what)
 {
 	demodulators.push(what);
-	mkenvelopes(get_visible_freq_range());
+	// mkenvelopes(get_visible_freq_range());
 }
 
 last_analog_demodulator_subtype = 'nfm';
@@ -601,7 +449,6 @@ function demodulator_analog_replace(subtype, for_digital)
 		demodulator_remove(0);
 	}
 	demodulator_add(new demodulator_default_analog(temp_offset,subtype));
-	demodulator_buttons_update();
 }
 
 function demodulator_set_offset_frequency(which,to_what)
@@ -656,56 +503,6 @@ function scale_offset_freq_from_px(x, visible_range)
 {
 	if(typeof visible_range === "undefined") visible_range=get_visible_freq_range();
 	return (visible_range.start+visible_range.bw*(x/canvas_container.clientWidth))-center_freq;
-}
-
-function scale_canvas_mousemove(evt)
-{
-	var event_handled;
-	if(scale_canvas_drag_params.mouse_down&&!scale_canvas_drag_params.drag&&Math.abs(evt.pageX-scale_canvas_drag_params.start_x)>canvas_drag_min_delta)
-	//we can use the main drag_min_delta thing of the main canvas
-	{
-		scale_canvas_drag_params.drag=true;
-		//call the drag_start for all demodulators (and they will decide if they're dragged, based on X coordinate)
-		for (var i=0;i<demodulators.length;i++) event_handled|=demodulators[i].envelope.drag_start(evt.pageX,scale_canvas_drag_params.key_modifiers);
-		scale_canvas.style.cursor="move";
-	}
-	else if(scale_canvas_drag_params.drag)
-	{
-		//call the drag_move for all demodulators (and they will decide if they're dragged)
-		for (var i=0;i<demodulators.length;i++) event_handled|=demodulators[i].envelope.drag_move(evt.pageX);
-		if (!event_handled) demodulator_set_offset_frequency(0,scale_offset_freq_from_px(evt.pageX));
-	}
-
-}
-
-function scale_canvas_end_drag(x)
-{
-	canvas_container.style.cursor="default";
-	scale_canvas_drag_params.drag=false;
-	scale_canvas_drag_params.mouse_down=false;
-	var event_handled=false;
-	for (var i=0;i<demodulators.length;i++) event_handled|=demodulators[i].envelope.drag_end(x);
-	//console.log(event_handled);
-	if (!event_handled) demodulator_set_offset_frequency(0,scale_offset_freq_from_px(x));
-}
-
-function scale_canvas_mouseup(evt)
-{
-	scale_canvas_end_drag(evt.pageX);
-}
-
-function scale_px_from_freq(f,range) { return Math.round(((f-range.start)/range.bw)*canvas_container.clientWidth); }
-
-function get_visible_freq_range()
-{
-	out={};
-	fcalc=function(x) { return Math.round(((-zoom_offset_px+x)/canvases[0].clientWidth)*bandwidth)+(center_freq-bandwidth/2); }
-	out.start=fcalc(0);
-	out.center=fcalc(canvas_container.clientWidth/2);
-	out.end=fcalc(canvas_container.clientWidth);
-	out.bw=out.end-out.start;
-	out.hps=out.bw/canvas_container.clientWidth;
-	return out;
 }
 
 var scale_markers_levels=[
@@ -804,79 +601,7 @@ function get_scale_mark_spacing(range)
 
 function mkscale()
 {
-	//clear the lower part of the canvas (where frequency scale resides; the upper part is used by filter envelopes):
-	// range=get_visible_freq_range();
-	// mkenvelopes(range); //when scale changes we will always have to redraw filter envelopes, too
-	// scale_ctx.clearRect(0,22,scale_ctx.canvas.width,scale_ctx.canvas.height-22);
-	// scale_ctx.strokeStyle = "#fff";
-	// scale_ctx.font = "bold 11px sans-serif";
-	// scale_ctx.textBaseline = "top";
-	// scale_ctx.fillStyle = "#fff";
-	// spacing=get_scale_mark_spacing(range);
-	// //console.log(spacing);
-	// marker_hz=Math.ceil(range.start/spacing.smallbw)*spacing.smallbw;
-	// text_h_pos=22+10+((is_firefox)?3:0);
-	// var text_to_draw;
-	// var ftext=function(f) {text_to_draw=format_frequency(spacing.params.format,f,spacing.params.pre_divide,spacing.params.decimals);}
-	// var last_large;
-	// for(;;)
-	// {
-	// 	var x=scale_px_from_freq(marker_hz,range);
-	// 	if(x>window.innerWidth) break;
-	// 	scale_ctx.beginPath();
-	// 	scale_ctx.moveTo(x, 22);
-	// 	if(marker_hz%spacing.params.large_marker_per_hz==0)
-	// 	{  //large marker
-	// 		if(typeof first_large == "undefined") var first_large=marker_hz;
-	// 		last_large=marker_hz;
-	// 		scale_ctx.lineWidth=3.5;
-	// 		scale_ctx.lineTo(x,22+11);
-	// 		ftext(marker_hz);
-	// 		var text_measured=scale_ctx.measureText(text_to_draw);
-	// 		scale_ctx.textAlign = "center";
-	// 		//advanced text drawing begins
-	// 		if( zoom_level==0 && (range.start+spacing.smallbw*spacing.ratio>marker_hz) && (x<text_measured.width/2) )
-	// 		{ //if this is the first overall marker when zoomed out...                  and if it would be clipped off the screen...
-	// 			if(scale_px_from_freq(marker_hz+spacing.smallbw*spacing.ratio,range)-text_measured.width>=scale_min_space_bw_texts)
-	// 			{ //and if we have enough space to draw it correctly without clipping
-	// 				scale_ctx.textAlign = "left";
-	// 				scale_ctx.fillText(text_to_draw, 0, text_h_pos);
-	// 			}
-	// 		}
-	// 		else if( zoom_level==0 && (range.end-spacing.smallbw*spacing.ratio<marker_hz) && (x>window.innerWidth-text_measured.width/2) )
-	// 		{ //     if this is the last overall marker when zoomed out...                 and if it would be clipped off the screen...
-	// 			if(window.innerWidth-text_measured.width-scale_px_from_freq(marker_hz-spacing.smallbw*spacing.ratio,range)>=scale_min_space_bw_texts)
-	// 			{ //and if we have enough space to draw it correctly without clipping
-	// 				scale_ctx.textAlign = "right";
-	// 				scale_ctx.fillText(text_to_draw, window.innerWidth, text_h_pos);
-	// 			}
-	// 		}
-	// 		else scale_ctx.fillText(text_to_draw, x, text_h_pos); //draw text normally
-	// 	}
-	// 	else
-	// 	{  //small marker
-	// 		scale_ctx.lineWidth=2;
-	// 		scale_ctx.lineTo(x,22+8);
-	// 	}
-	// 	marker_hz+=spacing.smallbw;
-	// 	scale_ctx.stroke();
-	// }
-	// if(zoom_level!=0)
-	// { // if zoomed, we don't want the texts to disappear because their markers can't be seen
-	// 	// on the left side
-	// 	scale_ctx.textAlign = "center";
-	// 	var f=first_large-spacing.smallbw*spacing.ratio;
-	// 	var x=scale_px_from_freq(f,range);
-	// 	ftext(f);
-	// 	var w=scale_ctx.measureText(text_to_draw).width;
-	// 	if(x+w/2>0) scale_ctx.fillText(text_to_draw, x, 22+10);
-	// 	// on the right side
-	// 	f=last_large+spacing.smallbw*spacing.ratio;
-	// 	x=scale_px_from_freq(f,range);
-	// 	ftext(f);
-	// 	w=scale_ctx.measureText(text_to_draw).width;
-	// 	if(x-w/2<window.innerWidth) scale_ctx.fillText(text_to_draw, x, 22+10);
-	// }
+
 }
 
 function resize_scale()
@@ -1150,14 +875,13 @@ function on_ws_recv(evt)
 	debug_ws_data_received+=evt.data.byteLength/1000;
 	first4Chars=getFirstChars(evt.data,4);
 	first3Chars=first4Chars.slice(0,3);
-	console.log(first3Chars);
 	if(first3Chars=="CLI")
 	{
 		var stringData=arrayBufferToString(evt.data);
 		if(stringData.substring(0,16)=="CLIENT DE SERVER") divlog("Server acknowledged WebSocket connection.");
 
 	}
-	if(first3Chars=="AUD" || first3Chars=="SND")
+	if(first3Chars=="SND")
 	{
 		var audio_data;
 		if(audio_compression=="adpcm") audio_data=new Uint8Array(evt.data,4)
@@ -1321,16 +1045,6 @@ function divlog(what, is_error)
 	is_error=!!is_error;
 	was_error |= is_error;
 	console.log(what);
-	// if(is_error)
-	// {
-	// 	what="<span class=\"webrx-error\">"+what+"</span>";
-	// 	if(e("openwebrx-panel-log").openwebrxHidden) toggle_panel("openwebrx-panel-log"); //show panel if any error is present
-	// }
-	// e("openwebrx-debugdiv").innerHTML+=what+"<br />";
-	// //var wls=e("openwebrx-log-scroll");
-	// //wls.scrollTop=wls.scrollHeight; //scroll to bottom
-    // $(".nano").nanoScroller();
-    // $(".nano").nanoScroller({ scroll: 'bottom' });
 }
 
 var audio_context;
@@ -1343,7 +1057,7 @@ var audio_received = Array();
 var audio_buffer_index = 0;
 var audio_resampler;
 var audio_codec=new sdrjs.ImaAdpcm();
-var audio_compression="unknown";
+var audio_compression="adpcm";
 var audio_node;
 //var audio_received_sample_rate = 48000;
 var audio_input_buffer_size;
@@ -1359,7 +1073,7 @@ var audio_rebuffer;
 var audio_last_output_buffer;
 var audio_last_output_offset = 0;
 var audio_buffering = false;
-//var audio_buffering_fill_to=4; //on audio underrun we wait until this n*audio_buffer_size samples are present
+var audio_buffering_fill_to=4; //on audio underrun we wait until this n*audio_buffer_size samples are present
 								//tnx to the hint from HA3FLT, now we have about half the response time! (original value: 10)
 
 function gain_ff(gain_value,data) //great! solved clicking! will have to move to sdr.js
@@ -1371,7 +1085,6 @@ function gain_ff(gain_value,data) //great! solved clicking! will have to move to
 
 function audio_prepare(data)
 {
-
 	//audio_rebuffer.push(sdrjs.ConvertI16_F(data));//no resampling
 	//audio_rebuffer.push(audio_resampler.process(sdrjs.ConvertI16_F(data)));//resampling without ADPCM
 	if(audio_compression=="none")
@@ -1380,7 +1093,7 @@ function audio_prepare(data)
 		audio_rebuffer.push(audio_resampler.process(gain_ff(volume,sdrjs.ConvertI16_F(audio_codec.decode(data))))); //resampling & ADPCM
 	else return;
 
-	//console.log("prepare",data.length,audio_rebuffer.remaining());
+	// console.log("prepare",data.length,audio_rebuffer.remaining());
 	while(audio_rebuffer.remaining())
 	{
 		audio_prepared_buffers.push(audio_rebuffer.take());
@@ -1456,95 +1169,38 @@ if (!AudioBuffer.prototype.copyToChannel)
 function audio_onprocess(e)
 {
 	//console.log("audio onprocess");
-	if(audio_buffering) return;
-	if(audio_prepared_buffers.length==0) { audio_buffer_progressbar_update(); /*add_problem("audio underrun");*/ audio_buffering=true; }
-	else { e.outputBuffer.copyToChannel(audio_prepared_buffers.shift(),0); }
+	
+	if(audio_buffering) 
+		return;
+	if(audio_prepared_buffers.length==0) { 
+		// audio_buffer_progressbar_update(); /*add_problem("audio underrun");*/ 
+		audio_buffering=true; 
+	}
+	else { 
+		e.outputBuffer.copyToChannel(audio_prepared_buffers.shift(),0); 
+	}
 }
-
-var audio_buffer_progressbar_update_disabled=false;
 
 var audio_buffer_total_average_level=0;
 var audio_buffer_total_average_level_length=0;
 var audio_overrun_cnt = 0;
 var audio_underrun_cnt = 0;
 
-function audio_buffer_progressbar_update()
-{
-	if(audio_buffer_progressbar_update_disabled) return;
-	var audio_buffer_value=(audio_prepared_buffers.length*audio_buffer_size)/audio_context.sampleRate;
-	audio_buffer_total_average_level_length++; audio_buffer_total_average_level=(audio_buffer_total_average_level*((audio_buffer_total_average_level_length-1)/audio_buffer_total_average_level_length))+(audio_buffer_value/audio_buffer_total_average_level_length);
-	var overrun=audio_buffer_value>audio_buffer_maximal_length_sec;
-	var underrun=audio_prepared_buffers.length==0;
-	var text="buffer";
-	if(overrun) { text="overrun"; console.log("audio overrun, "+(++audio_overrun_cnt).toString()); }
-	if(underrun) { text="underrun"; console.log("audio underrun, "+(++audio_underrun_cnt).toString()); }
-	if(overrun||underrun)
-	{
-		audio_buffer_progressbar_update_disabled=true;
-		window.setTimeout(function(){audio_buffer_progressbar_update_disabled=false; audio_buffer_progressbar_update();},1000);
-	}
-	progressbar_set(e("openwebrx-bar-audio-buffer"),(underrun)?1:audio_buffer_value/1.5,"Audio "+text+" ["+(audio_buffer_value).toFixed(1)+" s]",overrun||underrun||audio_buffer_value<0.25);
-}
-
-
-
 function audio_flush()
 {
 	flushed=false;
-	we_have_more_than=function(sec){ return sec*audio_context.sampleRate<audio_prepared_buffers.length*audio_buffer_size; }
+	we_have_more_than = function(sec) { 
+		return sec * audio_context.sampleRate < audio_prepared_buffers.length * audio_buffer_size; 
+	}
+
 	if(we_have_more_than(audio_buffer_maximal_length_sec)) while(we_have_more_than(audio_buffer_decrease_to_on_overrun_sec))
 	{
-		if(!flushed) audio_buffer_progressbar_update();
+		// if(!flushed) audio_buffer_progressbar_update();
 		flushed=true;
 		audio_prepared_buffers.shift();
 	}
+	
 	//if(flushed) add_problem("audio overrun");
-}
-
-
-function audio_onprocess_notused(e)
-{
-	//https://github.com/0xfe/experiments/blob/master/www/tone/js/sinewave.js
-	if(audio_received.length==0)
-	{ add_problem("audio underrun"); return; }
-	output = e.outputBuffer.getChannelData(0);
-	int_buffer = audio_received[0];
-	read_remain = audio_buffer_size;
-	//audio_buffer_maximal_length=120;
-
-	obi=0; //output buffer index
-	debug_str=""
-	while(1)
-	{
-		if(int_buffer.length-audio_buffer_index>read_remain)
-		{
-			for (i=audio_buffer_index; i<audio_buffer_index+read_remain; i++)
-				output[obi++] = int_buffer[i]/32768;
-			//debug_str+="added whole ibl="+int_buffer.length.toString()+" abi="+audio_buffer_index.toString()+" "+(int_buffer.length-audio_buffer_index).toString()+">"+read_remain.toString()+" obi="+obi.toString()+"\n";
-			audio_buffer_index+=read_remain;
-			break;
-		}
-		else
-		{
-			for (i=audio_buffer_index; i<int_buffer.length; i++)
-				output[obi++] = int_buffer[i]/32768;
-			read_remain-=(int_buffer.length-audio_buffer_index);
-			audio_buffer_current_size-=audio_received[0].length;
-			/*if (audio_received.length>audio_buffer_maximal_length)
-			{
-				add_problem("audio overrun");
-				audio_received.splice(0,audio_received.length-audio_buffer_maximal_length);
-			}
-			else*/
-				audio_received.splice(0,1);
-			//debug_str+="added remain, remain="+read_remain.toString()+" abi="+audio_buffer_index.toString()+" alen="+int_buffer.length.toString()+" i="+i.toString()+" arecva="+audio_received.length.toString()+" obi="+obi.toString()+"\n";
-			audio_buffer_index = 0;
-			if(audio_received.length == 0 || read_remain == 0) return;
-			int_buffer = audio_received[0];
-		}
-	}
-	//debug_str+="obi="+obi.toString();
-	//alert(debug_str);
 }
 
 function audio_flush_notused()
@@ -1586,7 +1242,7 @@ function parsehash()
 			{
 				console.log(parseInt(harr[1]));
 				console.log(center_freq);
-				starting_offset_frequency = parseInt(harr[1])-center_freq;
+				starting_offset_frequency = -14406000; //parseInt(harr[1])-center_freq;
 			}
 		});
 
@@ -1628,7 +1284,7 @@ function audio_preinit()
 function audio_init()
 {
     if(is_chrome) audio_context.resume()
-	if(starting_mute) toggleMute();
+	updateVolume(100);
 
 	if(audio_client_resampling_factor==0) return; //if failed to find a valid resampling factor...
 
@@ -1657,24 +1313,8 @@ function audio_init()
 	audio_source.buffer = buffer;
 	audio_source.noteOn(0);*/
 	demodulator_analog_replace("am");
-	if(starting_offset_frequency)
-	{
-		demodulators[0].offset_frequency = starting_offset_frequency;
-		e("webrx-actual-freq").innerHTML=format_frequency("{x} MHz",center_freq+starting_offset_frequency,1e6,4);
-		demodulators[0].set();
-		mkscale();
-	}
-
-	// hide log panel in a second (if user has not hidden it yet)
-	// window.setTimeout(function(){
-	// 	if(typeof e("openwebrx-panel-log").openwebrxHidden == "undefined" && !was_error)
-	// 	{
-	// 		// toggle_panel("openwebrx-panel-log");
-	// 		//animate(e("openwebrx-panel-log"),"opacity","",1,0,0.9,1000,60);
-	// 		//window.setTimeout(function(){toggle_panel("openwebrx-panel-log");e("openwebrx-panel-log").style.opacity="1";},1200)
-	// 	}
-	// },2000);
-
+	demodulators[0].offset_frequency = -14406000;
+	demodulators[0].set();
 }
 
 function on_ws_closed()
@@ -1745,98 +1385,6 @@ var canvas_default_height = 200;
 var canvas_container;
 var canvas_phantom;
 
-function add_canvas()
-{
-	var new_canvas = document.createElement("canvas");
-	new_canvas.width=fft_size;
-	new_canvas.height=canvas_default_height;
-	canvas_actual_line=canvas_default_height-1;
-	new_canvas.style.width=(canvas_container.clientWidth*zoom_levels[zoom_level]).toString()+"px";
-	new_canvas.style.left=zoom_offset_px.toString()+"px";
-	new_canvas.style.height=canvas_default_height.toString()+"px";
-	new_canvas.openwebrx_top=(-canvas_default_height+1);
-	new_canvas.style.top=new_canvas.openwebrx_top.toString()+"px";
-	canvas_context = new_canvas.getContext("2d");
-	canvas_container.appendChild(new_canvas);
-	new_canvas.addEventListener("mouseover", canvas_mouseover, false);
-	new_canvas.addEventListener("mouseout", canvas_mouseout, false);
-	new_canvas.addEventListener("mousemove", canvas_mousemove, false);
-	new_canvas.addEventListener("mouseup", canvas_mouseup, false);
-	new_canvas.addEventListener("mousedown", canvas_mousedown, false);
-	new_canvas.addEventListener("wheel",canvas_mousewheel, false);
-	canvases.push(new_canvas);
-}
-
-
-function init_canvas_container()
-{
-	canvas_container=e("webrx-canvas-container");
-	mathbox_container=e("openwebrx-mathbox-container");
-	canvas_container.addEventListener("mouseout",canvas_container_mouseout, false);
-	//window.addEventListener("mouseout",window_mouseout,false);
-	//document.body.addEventListener("mouseup",body_mouseup,false);
-	canvas_phantom=e("openwebrx-phantom-canvas");
-	canvas_phantom.addEventListener("mouseover", canvas_mouseover, false);
-	canvas_phantom.addEventListener("mouseout", canvas_mouseout, false);
-	canvas_phantom.addEventListener("mousemove", canvas_mousemove, false);
-	canvas_phantom.addEventListener("mouseup", canvas_mouseup, false);
-	canvas_phantom.addEventListener("mousedown", canvas_mousedown, false);
-	canvas_phantom.addEventListener("wheel",canvas_mousewheel, false);
-	canvas_phantom.style.width=canvas_container.clientWidth+"px";
-	add_canvas();
-}
-
-canvas_maxshift=0;
-
-function shift_canvases()
-{
-	canvases.forEach(function(p)
-	{
-		p.style.top=(p.openwebrx_top++).toString()+"px";
-	});
-	canvas_maxshift++;
-	if(canvas_container.clientHeight>canvas_maxshift)
-	{
-		canvas_phantom.style.top=canvas_maxshift.toString()+"px";
-		canvas_phantom.style.height=(canvas_container.clientHeight-canvas_maxshift).toString()+"px";
-		canvas_phantom.style.display="block";
-	}
-	else
-		canvas_phantom.style.display="none";
-
-
-	//canvas_container.style.height=(((canvases.length-1)*canvas_default_height)+(canvas_default_height-canvas_actual_line)).toString()+"px";
-	//canvas_container.style.height="100%";
-}
-
-function resize_canvases(zoom)
-{
-	if(typeof zoom == "undefined") zoom=false;
-	if(!zoom) mkzoomlevels();
-	zoom_calc();
-	new_width=(canvas_container.clientWidth*zoom_levels[zoom_level]).toString()+"px";
-	var zoom_value=zoom_offset_px.toString()+"px";
-	canvases.forEach(function(p)
-	{
-		p.style.width=new_width;
-		p.style.left=zoom_value;
-	});
-	canvas_phantom.style.width=new_width;
-	canvas_phantom.style.left=zoom_value;
-}
-
-function waterfall_init()
-{
-	init_canvas_container();
-	waterfall_timer = window.setInterval(()=>{waterfall_dequeue(); secondary_demod_waterfall_dequeue();},900/fft_fps);
-	resize_waterfall_container(false); /* then */ resize_canvases();
-	scale_setup();
-	mkzoomlevels();
-	waterfall_setup_done=1;
-}
-
-var waterfall_dont_scale=0;
-
 var mathbox_shift = function()
 {
 	if(mathbox_data_current_depth < mathbox_data_max_depth) mathbox_data_current_depth++;
@@ -1851,16 +1399,6 @@ var mathbox_clear_data = function()
 	mathbox_data_current_depth = 0;
 }
 
-//var mathbox_get_data_line = function(x) //x counts from 0 to mathbox_data_current_depth
-//{
-//	return (mathbox_data_max_depth + mathbox_data_index - mathbox_data_current_depth + x - 1) % mathbox_data_max_depth;
-//}
-//
-//var mathbox_data_index_valid = function(x) //x counts from 0 to mathbox_data_current_depth
-//{
-//	return x<mathbox_data_current_depth;
-//}
-
 var mathbox_get_data_line = function(x)
 {
 	return (mathbox_data_max_depth + mathbox_data_index + x - 1) % mathbox_data_max_depth;
@@ -1869,137 +1407,6 @@ var mathbox_get_data_line = function(x)
 var mathbox_data_index_valid = function(x)
 {
 	return x>mathbox_data_max_depth-mathbox_data_current_depth;
-}
-
-
-
-function waterfall_add(data)
-{
-	if(!waterfall_setup_done) return;
-	var w=fft_size;
-
-	//waterfall_shift();
-	// ==== do scaling if required ====
-	/*if(waterfall_dont_scale)
-	{
-		scaled=data;
-		for(i=scaled.length;i<w;i++) scaled[i]=-100;
-	}
-	else
-	{
-		if ((to-from)==w)
-		{
-			scaled=data;
-		}
-		else if ((to-from)<w)
-		{	//make line bigger
-			pixel_per_point=w/(to-from);
-			scaled=Array();
-			j=0;
-			remain=pixel_per_point;
-			for(i=0; i<w; i++)
-			{
-				//thiscolor=data[j]*(remain-floor(remain))+data[j+1]*(1-(remain-floor(remain)))
-				//nextcolor=data[j+1]*(remain-floor(remain))+data[j+2]*(1-(remain-floor(remain)))
-				if(remain>1)
-				{
-					scaled[i]=data[j]*(remain/pixel_per_point)+data[j+1]*((1-remain)/pixel_per_point);
-					remain--;
-				}
-				else
-				{
-					j++;
-					scaled[i]=data[j]*(remain/pixel_per_point)+data[j+1]*((1-remain)/pixel_per_point);
-					remain=pixel_per_point-(1-remain);
-				}
-			}
-
-		}
-		else
-		{  //make line smaller (linear decimation, moving average)
-			point_per_pixel=(to-from)/w;
-			scaled=Array();
-			j=0;
-			remain=point_per_pixel;
-			last_pixel=0;
-			for(i=from; i<to; i++)
-			{
-				if(remain>1)
-				{
-					last_pixel+=data[i];
-					remain--;
-				}
-				else
-				{
-					last_pixel+=data[i]*remain;
-					scaled[j++]=last_pixel/point_per_pixel;
-					last_pixel=data[i]*(1-remain);
-					remain=point_per_pixel-(1-remain); //?
-				}
-			}
-		}
-	}
-
-	//Add line to waterfall image
-	base=(h-1)*w*4;
-	for(x=0;x<w;x++)
-	{
-		color=waterfall_mkcolor(scaled[x]);
-		for(i=0;i<4;i++)
-			waterfall_image.data[base+x*4+i] = ((color>>>0)>>((3-i)*8))&0xff;
-	}*/
-
-	if(mathbox_mode==MATHBOX_MODES.WATERFALL)
-	{
-		//Handle mathbox
-		for(var i=0;i<fft_size;i++) mathbox_data[i+mathbox_data_index*fft_size]=data[i];
-		mathbox_shift();
-	}
-	else
-	{
-	//Add line to waterfall image
-	oneline_image = canvas_context.createImageData(w,1);
-	for(x=0;x<w;x++)
-	{
-		color=waterfall_mkcolor(data[x]);
-		for(i=0;i<4;i++)
-			oneline_image.data[x*4+i] = ((color>>>0)>>((3-i)*8))&0xff;
-	}
-
-	//Draw image
-	canvas_context.putImageData(oneline_image, 0, canvas_actual_line--);
-	shift_canvases();
-	if(canvas_actual_line<0) add_canvas();
-	}
-
-
-}
-
-/*
-function waterfall_shift()
-{
-	w=canvas.width;
-	h=canvas.height;
-	for(y=0; y<h-1; y++)
-	{
-		for(i=0; i<w*4; i++)
-			waterfall_image.data[y*w*4+i] = waterfall_image.data[(y+1)*w*4+i];
-	}
-}*/
-
-function check_top_bar_congestion()
-{
-	var rmf=function(x){ return x.offsetLeft+x.offsetWidth; };
-	var wet=e("webrx-rx-title");
-	var wed=e("webrx-rx-desc");
-	var rightmost=Math.max(rmf(wet),rmf(wed));
-	var tl=e("openwebrx-main-buttons");
-
-	[wet, wed].map(function(what) {
-		if(rmf(what)>tl.offsetLeft-20) what.style.opacity=what.style.opacity="0";
-		else wet.style.opacity=wed.style.opacity="1";
-	});
-
 }
 
 var MATHBOX_MODES =
@@ -2176,54 +1583,6 @@ function waterfall_clear()
 	add_canvas();
 }
 
-function openwebrx_resize()
-{
-	resize_canvases();
-	resize_waterfall_container(true);
-	resize_scale();
-	check_top_bar_congestion();
-}
-
-function openwebrx_init()
-{
-	if(ios||is_chrome) e("openwebrx-big-grey").style.display="table-cell";
-	(opb=e("openwebrx-play-button-text")).style.marginTop=(window.innerHeight/2-opb.clientHeight/2).toString()+"px";
-	init_rx_photo();
-	open_websocket();
-    secondary_demod_init();
-	place_panels(first_show_panel);
-	window.setTimeout(function(){window.setInterval(debug_audio,1000);},1000);
-	window.addEventListener("resize",openwebrx_resize);
-	check_top_bar_congestion();
-
-	//Synchronise volume with slider
-	updateVolume();
-	waterfallColorsDefault();
-}
-
-function iosPlayButtonClick()
-{
-	//On iOS, we can only start audio from a click or touch event.
-	audio_init();
-	e("openwebrx-big-grey").style.opacity=0;
-	window.setTimeout(function(){ e("openwebrx-big-grey").style.display="none"; },1100);
-}
-
-/*
-window.setInterval(function(){
-	sum=0;
-	for(i=0;i<audio_received.length;i++)
-		sum+=audio_received[i].length;
-	divlog("audio buffer bytes: "+sum);
-}, 2000);*/
-
-/*function email(what)
-{
-	//| http://stackoverflow.com/questions/617647/where-is-my-one-line-implementation-of-rot13-in-javascript-going-wrong
-	what=what.replace(/[a-zA-Z]/g,function(c){return String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+13)?c:c-26);});
-	window.location.href="mailto:"+what;
-}*/
-
 var rt = function (s,n) {return s.replace(/[a-zA-Z]/g,function(c){return String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+n)?c:c-26);});}
 var irt = function (s,n) {return s.replace(/[a-zA-Z]/g,function(c){return String.fromCharCode((c>="a"?97:65)<=(c=c.charCodeAt(0)-n)?c:c+26);});}
 var sendmail2 = function (s) { window.location.href="mailto:"+irt(s.replace("=",String.fromCharCode(0100)).replace("$","."),8); }
@@ -2239,24 +1598,10 @@ function debug_audio()
 	audio_debug_time_last_start=time_now; //now
 	audio_debug_time_taken=(time_now-audio_debug_time_start)/1000;
 	kbps_mult=(audio_compression=="adpcm")?8:16;
-	//e("openwebrx-audio-sps").innerHTML=
-	//	((audio_compression=="adpcm")?"ADPCM compressed":"uncompressed")+" audio downlink:<br/> "+(audio_buffer_current_size_debug*kbps_mult/audio_debug_time_since_last_call).toFixed(0)+" kbps ("+
-	//	(audio_buffer_all_size_debug*kbps_mult/audio_debug_time_taken).toFixed(1)+" kbps avg.), feed at "+
-	//	((audio_buffer_current_count_debug*audio_buffer_size)/audio_debug_time_taken).toFixed(1)+" sps output";
-
 	var audio_speed_value=audio_buffer_current_size_debug*kbps_mult/audio_debug_time_since_last_call;
-	progressbar_set(e("openwebrx-bar-audio-speed"),audio_speed_value/500000,"Audio stream ["+(audio_speed_value/1000).toFixed(0)+" kbps]",false);
-
 	var audio_output_value=(audio_buffer_current_count_debug*audio_buffer_size)/audio_debug_time_taken;
-	progressbar_set(e("openwebrx-bar-audio-output"),audio_output_value/55000,"Audio output ["+(audio_output_value/1000).toFixed(1)+" ksps]",audio_output_value>55000||audio_output_value<10000);
-
-	audio_buffer_progressbar_update();
-
 	var network_speed_value=debug_ws_data_received/audio_debug_time_taken;
-	progressbar_set(e("openwebrx-bar-network-speed"),network_speed_value*8/2000,"Network usage ["+(network_speed_value*8).toFixed(1)+" kbps]",false);
-
 	audio_buffer_current_size_debug=0;
-
 	if(waterfall_measure_minmax) waterfall_measure_minmax_print();
 }
 
@@ -2284,164 +1629,6 @@ function pop_bottommost_panel(from)
 	return to_return;
 }
 
-function toggle_panel(what, on)
-{
-    var item=e(what);
-    if(typeof on !== "undefined") 
-    {
-        if(item.openwebrxHidden && !on) return;
-        if(!item.openwebrxHidden && on) return;
-    }
-	if(item.openwebrxDisableClick) return;
-	item.style.transitionDuration="599ms";
-	item.style.transitionDelay="0ms";
-	if(!item.openwebrxHidden)
-	{
-		window.setTimeout(function(){item.openwebrxHidden=!item.openwebrxHidden; place_panels(); item.openwebrxDisableClick=false;},700);
-		item.style.transform="perspective( 599px ) rotateX( 90deg )";
-	}
-	else
-	{
-		item.openwebrxHidden=!item.openwebrxHidden; place_panels();
-	    window.setTimeout(function(){ item.openwebrxDisableClick=false;},700);
-		item.style.transform="perspective( 599px ) rotateX( 0deg )";
-	}
-	item.style.transitionDuration="0";
-
-	item.openwebrxDisableClick=true;
-
-}
-
-function first_show_panel(panel)
-{
-	panel.style.transitionDuration=0;
-	panel.style.transitionDelay=0;
-	rotx=(Math.random()>0.5)?-90:90;
-	roty=0;
-	if(Math.random()>0.5)
-	{
-		rottemp=rotx;
-		rotx=roty;
-		roty=rottemp;
-	}
-	if(rotx!=0 && Math.random()>0.5) rotx=270;
-	//console.log(rotx,roty);
-	transformString = "perspective( 599px ) rotateX( %1deg ) rotateY( %2deg )"
-		.replace("%1",rotx.toString()).replace("%2",roty.toString());
-	//console.log(transformString);
-	//console.log(panel);
-	panel.style.transform=transformString;
-	window.setTimeout(function() {
-		panel.style.transitionDuration="599ms";
-		panel.style.transitionDelay=(Math.floor(Math.random()*500)).toString()+"ms";
-		panel.style.transform="perspective( 599px ) rotateX( 0deg ) rotateY( 0deg )";
-		//panel.style.transitionDuration="0ms";
-		//panel.style.transitionDelay="0";
-	}, 1);
-}
-
-function place_panels(function_apply)
-{
-	if(function_apply == undefined) function_apply = function(x){};
-	var hoffset=0; //added this because the first panel should not have such great gap below
-	var left_col=[];
-	var right_col=[];
-	var plist=e("openwebrx-panels-container").children;
-	for(i=0;i<plist.length;i++)
-	{
-		c=plist[i];
-		if(c.className=="openwebrx-panel")
-		{
-			if(c.openwebrxHidden)
-			{
-				c.style.display="none";
-				continue;
-			}
-			c.style.display="block";
-			c.openwebrxPanelTransparent=(!!c.dataset.panelTransparent);
-			newSize=c.dataset.panelSize.split(",");
-			if (c.dataset.panelPos=="left") { left_col.push(c); }
-			else if(c.dataset.panelPos=="right") { right_col.push(c); }
-			c.style.width=newSize[0]+"px";
-			//c.style.height=newSize[1]+"px";
-			if(!c.openwebrxPanelTransparent) c.style.margin=panel_margin.toString()+"px";
-			else c.style.marginLeft=panel_margin.toString()+"px";
-			c.openwebrxPanelWidth=parseInt(newSize[0]);
-			c.openwebrxPanelHeight=parseInt(newSize[1]);
-		}
-	}
-
-	y=hoffset; //was y=0 before hoffset
-	while(left_col.length>0)
-	{
-		p=pop_bottommost_panel(left_col);
-		p.style.left="0px";
-		p.style.bottom=y.toString()+"px";
-		p.style.visibility="visible";
-		y+=p.openwebrxPanelHeight+((p.openwebrxPanelTransparent)?0:3)*panel_margin;
-		if(function_apply) function_apply(p);
-        //console.log(p.id, y, p.openwebrxPanelTransparent);
-	}
-	y=hoffset;
-	while(right_col.length>0)
-	{
-		p=pop_bottommost_panel(right_col);
-		p.style.right=(e("webrx-canvas-container").offsetWidth-e("webrx-canvas-container").clientWidth).toString()+"px"; //get scrollbar width
-		p.style.bottom=y.toString()+"px";
-		p.style.visibility="visible";
-        y+=p.openwebrxPanelHeight+((p.openwebrxPanelTransparent)?0:3)*panel_margin;
-		if(function_apply) function_apply(p);
-	}
-}
-
-function progressbar_set(obj,val,text,over)
-{
-	// if (val<0.05) val=0;
-	// if (val>1) val=1;
-	// var innerBar=null;
-	// var innerText=null;
-	// for(var i=0;i<obj.children.length;i++)
-	// {
-	// 	if(obj.children[i].className=="openwebrx-progressbar-text") innerText=obj.children[i];
-	// 	else if(obj.children[i].className=="openwebrx-progressbar-bar") innerBar=obj.children[i];
-	// }
-	// if(innerBar==null) return;
-	// //.h: function animate(object,style_name,unit,from,to,accel,time_ms,fps,to_exec)
-	// animate(innerBar,"width","px",innerBar.clientWidth,val*obj.clientWidth,0.7,700,60);
-	// //innerBar.style.width=(val*100).toFixed(0)+"%";
-	// innerBar.style.backgroundColor=(over)?"#ff6262":"#00aba6";
-	// if(innerText==null) return;
-	// innerText.innerHTML=text;
-}
-
-function demodulator_buttons_update()
-{
-	$(".openwebrx-demodulator-button").removeClass("highlighted");
-    if(secondary_demod) $("#openwebrx-button-dig").addClass("highlighted");
-    else switch(demodulators[0].subtype)
-	{
-	case "nfm":
-		$("#openwebrx-button-nfm").addClass("highlighted");
-		break;
-	case "am":
-		$("#openwebrx-button-am").addClass("highlighted");
-		break;
-	case "lsb":
-	case "usb":
-	case "cw":
-		if(demodulators[0].high_cut-demodulators[0].low_cut<300)
-			$("#openwebrx-button-cw").addClass("highlighted");
-		else
-		{
-			if(demodulators[0].high_cut<0) 
-				$("#openwebrx-button-lsb").addClass("highlighted");
-			else if(demodulators[0].low_cut>0) 
-				$("#openwebrx-button-usb").addClass("highlighted");
-			else $("#openwebrx-button-lsb, #openwebrx-button-usb").addClass("highlighted");
-		}
-		break;
-	}
-}
 function demodulator_analog_replace_last() { demodulator_analog_replace(last_analog_demodulator_subtype); }
 
 /*
@@ -2472,7 +1659,6 @@ function demodulator_digital_replace(subtype)
     case "rtty":
         secondary_demod_start(subtype);
         demodulator_analog_replace('usb', true);
-        demodulator_buttons_update();
         break;
     }
     // toggle_panel("openwebrx-panel-digimodes", true);
@@ -2687,57 +1873,4 @@ function secondary_demod_update_channel_freq_from_event(evt)
         }, 50);
     }
     secondary_demod_update_marker();
-}
-
-secondary_demod_mousedown=false;
-function secondary_demod_canvas_container_mousein()
-{
-    $("#openwebrx-digimode-select-channel").css("opacity","0.7"); //.css("border-width", "1px");
-}
-
-function secondary_demod_canvas_container_mouseout()
-{
-    $("#openwebrx-digimode-select-channel").css("opacity","0");
-}
-
-function secondary_demod_canvas_container_mousemove(evt)
-{
-    if(secondary_demod_mousedown) secondary_demod_update_channel_freq_from_event(evt);
-}
-
-function secondary_demod_canvas_container_mousedown(evt)
-{
-    if(evt.which==1) secondary_demod_mousedown=true;
-}
-
-function secondary_demod_canvas_container_mouseup(evt)
-{
-    if(evt.which==1) secondary_demod_mousedown=false;
-    secondary_demod_update_channel_freq_from_event(evt);
-}
-
-
-function secondary_demod_waterfall_set_zoom(low_cut, high_cut)
-{
-    if(!secondary_demod || !secondary_demod_canvases_initialized) return;
-    if(low_cut<0 && high_cut<0)
-    {
-        var hctmp = high_cut;
-        var lctmp = low_cut;
-        low_cut = -hctmp;
-        low_cut = -lctmp;
-    }
-    else if(low_cut<0 && high_cut>0)
-    {
-        high_cut=Math.max(Math.abs(high_cut), Math.abs(low_cut));
-        low_cut=0;
-    }
-    secondary_demod_low_cut = low_cut;
-    secondary_demod_high_cut = high_cut;
-    var shown_bw = high_cut-low_cut;
-    secondary_demod_canvas_width = $(secondary_demod_canvas_container).width()  * (if_samp_rate/2)/shown_bw;
-    secondary_demod_canvas_left = -secondary_demod_canvas_width*(low_cut/(if_samp_rate/2));
-    //console.log("setzoom", secondary_demod_canvas_width, secondary_demod_canvas_left, low_cut, high_cut);
-    secondary_demod_canvases.map((x)=>{$(x).css("left",secondary_demod_canvas_left+"px").css("width",secondary_demod_canvas_width+"px");});
-    secondary_demod_update_channel_freq_from_event();
 }
