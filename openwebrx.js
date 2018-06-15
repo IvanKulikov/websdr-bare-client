@@ -805,78 +805,78 @@ function get_scale_mark_spacing(range)
 function mkscale()
 {
 	//clear the lower part of the canvas (where frequency scale resides; the upper part is used by filter envelopes):
-	range=get_visible_freq_range();
-	mkenvelopes(range); //when scale changes we will always have to redraw filter envelopes, too
-	scale_ctx.clearRect(0,22,scale_ctx.canvas.width,scale_ctx.canvas.height-22);
-	scale_ctx.strokeStyle = "#fff";
-	scale_ctx.font = "bold 11px sans-serif";
-	scale_ctx.textBaseline = "top";
-	scale_ctx.fillStyle = "#fff";
-	spacing=get_scale_mark_spacing(range);
-	//console.log(spacing);
-	marker_hz=Math.ceil(range.start/spacing.smallbw)*spacing.smallbw;
-	text_h_pos=22+10+((is_firefox)?3:0);
-	var text_to_draw;
-	var ftext=function(f) {text_to_draw=format_frequency(spacing.params.format,f,spacing.params.pre_divide,spacing.params.decimals);}
-	var last_large;
-	for(;;)
-	{
-		var x=scale_px_from_freq(marker_hz,range);
-		if(x>window.innerWidth) break;
-		scale_ctx.beginPath();
-		scale_ctx.moveTo(x, 22);
-		if(marker_hz%spacing.params.large_marker_per_hz==0)
-		{  //large marker
-			if(typeof first_large == "undefined") var first_large=marker_hz;
-			last_large=marker_hz;
-			scale_ctx.lineWidth=3.5;
-			scale_ctx.lineTo(x,22+11);
-			ftext(marker_hz);
-			var text_measured=scale_ctx.measureText(text_to_draw);
-			scale_ctx.textAlign = "center";
-			//advanced text drawing begins
-			if( zoom_level==0 && (range.start+spacing.smallbw*spacing.ratio>marker_hz) && (x<text_measured.width/2) )
-			{ //if this is the first overall marker when zoomed out...                  and if it would be clipped off the screen...
-				if(scale_px_from_freq(marker_hz+spacing.smallbw*spacing.ratio,range)-text_measured.width>=scale_min_space_bw_texts)
-				{ //and if we have enough space to draw it correctly without clipping
-					scale_ctx.textAlign = "left";
-					scale_ctx.fillText(text_to_draw, 0, text_h_pos);
-				}
-			}
-			else if( zoom_level==0 && (range.end-spacing.smallbw*spacing.ratio<marker_hz) && (x>window.innerWidth-text_measured.width/2) )
-			{ //     if this is the last overall marker when zoomed out...                 and if it would be clipped off the screen...
-				if(window.innerWidth-text_measured.width-scale_px_from_freq(marker_hz-spacing.smallbw*spacing.ratio,range)>=scale_min_space_bw_texts)
-				{ //and if we have enough space to draw it correctly without clipping
-					scale_ctx.textAlign = "right";
-					scale_ctx.fillText(text_to_draw, window.innerWidth, text_h_pos);
-				}
-			}
-			else scale_ctx.fillText(text_to_draw, x, text_h_pos); //draw text normally
-		}
-		else
-		{  //small marker
-			scale_ctx.lineWidth=2;
-			scale_ctx.lineTo(x,22+8);
-		}
-		marker_hz+=spacing.smallbw;
-		scale_ctx.stroke();
-	}
-	if(zoom_level!=0)
-	{ // if zoomed, we don't want the texts to disappear because their markers can't be seen
-		// on the left side
-		scale_ctx.textAlign = "center";
-		var f=first_large-spacing.smallbw*spacing.ratio;
-		var x=scale_px_from_freq(f,range);
-		ftext(f);
-		var w=scale_ctx.measureText(text_to_draw).width;
-		if(x+w/2>0) scale_ctx.fillText(text_to_draw, x, 22+10);
-		// on the right side
-		f=last_large+spacing.smallbw*spacing.ratio;
-		x=scale_px_from_freq(f,range);
-		ftext(f);
-		w=scale_ctx.measureText(text_to_draw).width;
-		if(x-w/2<window.innerWidth) scale_ctx.fillText(text_to_draw, x, 22+10);
-	}
+	// range=get_visible_freq_range();
+	// mkenvelopes(range); //when scale changes we will always have to redraw filter envelopes, too
+	// scale_ctx.clearRect(0,22,scale_ctx.canvas.width,scale_ctx.canvas.height-22);
+	// scale_ctx.strokeStyle = "#fff";
+	// scale_ctx.font = "bold 11px sans-serif";
+	// scale_ctx.textBaseline = "top";
+	// scale_ctx.fillStyle = "#fff";
+	// spacing=get_scale_mark_spacing(range);
+	// //console.log(spacing);
+	// marker_hz=Math.ceil(range.start/spacing.smallbw)*spacing.smallbw;
+	// text_h_pos=22+10+((is_firefox)?3:0);
+	// var text_to_draw;
+	// var ftext=function(f) {text_to_draw=format_frequency(spacing.params.format,f,spacing.params.pre_divide,spacing.params.decimals);}
+	// var last_large;
+	// for(;;)
+	// {
+	// 	var x=scale_px_from_freq(marker_hz,range);
+	// 	if(x>window.innerWidth) break;
+	// 	scale_ctx.beginPath();
+	// 	scale_ctx.moveTo(x, 22);
+	// 	if(marker_hz%spacing.params.large_marker_per_hz==0)
+	// 	{  //large marker
+	// 		if(typeof first_large == "undefined") var first_large=marker_hz;
+	// 		last_large=marker_hz;
+	// 		scale_ctx.lineWidth=3.5;
+	// 		scale_ctx.lineTo(x,22+11);
+	// 		ftext(marker_hz);
+	// 		var text_measured=scale_ctx.measureText(text_to_draw);
+	// 		scale_ctx.textAlign = "center";
+	// 		//advanced text drawing begins
+	// 		if( zoom_level==0 && (range.start+spacing.smallbw*spacing.ratio>marker_hz) && (x<text_measured.width/2) )
+	// 		{ //if this is the first overall marker when zoomed out...                  and if it would be clipped off the screen...
+	// 			if(scale_px_from_freq(marker_hz+spacing.smallbw*spacing.ratio,range)-text_measured.width>=scale_min_space_bw_texts)
+	// 			{ //and if we have enough space to draw it correctly without clipping
+	// 				scale_ctx.textAlign = "left";
+	// 				scale_ctx.fillText(text_to_draw, 0, text_h_pos);
+	// 			}
+	// 		}
+	// 		else if( zoom_level==0 && (range.end-spacing.smallbw*spacing.ratio<marker_hz) && (x>window.innerWidth-text_measured.width/2) )
+	// 		{ //     if this is the last overall marker when zoomed out...                 and if it would be clipped off the screen...
+	// 			if(window.innerWidth-text_measured.width-scale_px_from_freq(marker_hz-spacing.smallbw*spacing.ratio,range)>=scale_min_space_bw_texts)
+	// 			{ //and if we have enough space to draw it correctly without clipping
+	// 				scale_ctx.textAlign = "right";
+	// 				scale_ctx.fillText(text_to_draw, window.innerWidth, text_h_pos);
+	// 			}
+	// 		}
+	// 		else scale_ctx.fillText(text_to_draw, x, text_h_pos); //draw text normally
+	// 	}
+	// 	else
+	// 	{  //small marker
+	// 		scale_ctx.lineWidth=2;
+	// 		scale_ctx.lineTo(x,22+8);
+	// 	}
+	// 	marker_hz+=spacing.smallbw;
+	// 	scale_ctx.stroke();
+	// }
+	// if(zoom_level!=0)
+	// { // if zoomed, we don't want the texts to disappear because their markers can't be seen
+	// 	// on the left side
+	// 	scale_ctx.textAlign = "center";
+	// 	var f=first_large-spacing.smallbw*spacing.ratio;
+	// 	var x=scale_px_from_freq(f,range);
+	// 	ftext(f);
+	// 	var w=scale_ctx.measureText(text_to_draw).width;
+	// 	if(x+w/2>0) scale_ctx.fillText(text_to_draw, x, 22+10);
+	// 	// on the right side
+	// 	f=last_large+spacing.smallbw*spacing.ratio;
+	// 	x=scale_px_from_freq(f,range);
+	// 	ftext(f);
+	// 	w=scale_ctx.measureText(text_to_draw).width;
+	// 	if(x-w/2<window.innerWidth) scale_ctx.fillText(text_to_draw, x, 22+10);
+	// }
 }
 
 function resize_scale()
@@ -1149,14 +1149,15 @@ function on_ws_recv(evt)
 	//
 	debug_ws_data_received+=evt.data.byteLength/1000;
 	first4Chars=getFirstChars(evt.data,4);
-    first3Chars=first4Chars.slice(0,3);
+	first3Chars=first4Chars.slice(0,3);
+	console.log(first3Chars);
 	if(first3Chars=="CLI")
 	{
 		var stringData=arrayBufferToString(evt.data);
 		if(stringData.substring(0,16)=="CLIENT DE SERVER") divlog("Server acknowledged WebSocket connection.");
 
 	}
-	if(first3Chars=="AUD")
+	if(first3Chars=="AUD" || first3Chars=="SND")
 	{
 		var audio_data;
 		if(audio_compression=="adpcm") audio_data=new Uint8Array(evt.data,4)
@@ -1193,6 +1194,7 @@ function on_ws_recv(evt)
 		/*try
 		{*/
 			var stringData=arrayBufferToString(evt.data);
+			console.log(stringData);
 			params=stringData.substring(4).split(" ");
 			for(i=0;i<params.length;i++)
 			{
@@ -1307,7 +1309,8 @@ function waterfall_dequeue()
 
 function on_ws_opened()
 {
-	ws.send("SERVER DE CLIENT openwebrx.js");
+	ws.send("SET auth t=kiwi p=#");
+	ws.send("SERVER DE CLIENT openwebrx.js W/F");
 	divlog("WebSocket opened to "+ws_url);
 }
 
@@ -1653,7 +1656,7 @@ function audio_init()
    audio_buffer = audio_context.createBuffer(xhr.response, false);
 	audio_source.buffer = buffer;
 	audio_source.noteOn(0);*/
-	demodulator_analog_replace(starting_mod);
+	demodulator_analog_replace("am");
 	if(starting_offset_frequency)
 	{
 		demodulators[0].offset_frequency = starting_offset_frequency;
@@ -1662,15 +1665,15 @@ function audio_init()
 		mkscale();
 	}
 
-	//hide log panel in a second (if user has not hidden it yet)
-	window.setTimeout(function(){
-		if(typeof e("openwebrx-panel-log").openwebrxHidden == "undefined" && !was_error)
-		{
-			toggle_panel("openwebrx-panel-log");
-			//animate(e("openwebrx-panel-log"),"opacity","",1,0,0.9,1000,60);
-			//window.setTimeout(function(){toggle_panel("openwebrx-panel-log");e("openwebrx-panel-log").style.opacity="1";},1200)
-		}
-	},2000);
+	// hide log panel in a second (if user has not hidden it yet)
+	// window.setTimeout(function(){
+	// 	if(typeof e("openwebrx-panel-log").openwebrxHidden == "undefined" && !was_error)
+	// 	{
+	// 		// toggle_panel("openwebrx-panel-log");
+	// 		//animate(e("openwebrx-panel-log"),"opacity","",1,0,0.9,1000,60);
+	// 		//window.setTimeout(function(){toggle_panel("openwebrx-panel-log");e("openwebrx-panel-log").style.opacity="1";},1200)
+	// 	}
+	// },2000);
 
 }
 
@@ -1706,6 +1709,8 @@ function open_websocket(url)
 		ws.close();
 	};
 	ws.onerror = on_ws_error;
+
+	return ws;
 }
 
 function waterfall_mkcolor(db_value, waterfall_colors_arg)
@@ -2391,22 +2396,22 @@ function place_panels(function_apply)
 
 function progressbar_set(obj,val,text,over)
 {
-	if (val<0.05) val=0;
-	if (val>1) val=1;
-	var innerBar=null;
-	var innerText=null;
-	for(var i=0;i<obj.children.length;i++)
-	{
-		if(obj.children[i].className=="openwebrx-progressbar-text") innerText=obj.children[i];
-		else if(obj.children[i].className=="openwebrx-progressbar-bar") innerBar=obj.children[i];
-	}
-	if(innerBar==null) return;
-	//.h: function animate(object,style_name,unit,from,to,accel,time_ms,fps,to_exec)
-	animate(innerBar,"width","px",innerBar.clientWidth,val*obj.clientWidth,0.7,700,60);
-	//innerBar.style.width=(val*100).toFixed(0)+"%";
-	innerBar.style.backgroundColor=(over)?"#ff6262":"#00aba6";
-	if(innerText==null) return;
-	innerText.innerHTML=text;
+	// if (val<0.05) val=0;
+	// if (val>1) val=1;
+	// var innerBar=null;
+	// var innerText=null;
+	// for(var i=0;i<obj.children.length;i++)
+	// {
+	// 	if(obj.children[i].className=="openwebrx-progressbar-text") innerText=obj.children[i];
+	// 	else if(obj.children[i].className=="openwebrx-progressbar-bar") innerBar=obj.children[i];
+	// }
+	// if(innerBar==null) return;
+	// //.h: function animate(object,style_name,unit,from,to,accel,time_ms,fps,to_exec)
+	// animate(innerBar,"width","px",innerBar.clientWidth,val*obj.clientWidth,0.7,700,60);
+	// //innerBar.style.width=(val*100).toFixed(0)+"%";
+	// innerBar.style.backgroundColor=(over)?"#ff6262":"#00aba6";
+	// if(innerText==null) return;
+	// innerText.innerHTML=text;
 }
 
 function demodulator_buttons_update()
@@ -2470,7 +2475,7 @@ function demodulator_digital_replace(subtype)
         demodulator_buttons_update();
         break;
     }
-    toggle_panel("openwebrx-panel-digimodes", true);
+    // toggle_panel("openwebrx-panel-digimodes", true);
 }
 
 function secondary_demod_create_canvas()
@@ -2588,7 +2593,7 @@ function secondary_demod_data_clear()
 function secondary_demod_close_window()
 {
     secondary_demod_stop();
-    toggle_panel("openwebrx-panel-digimodes", false);
+    // toggle_panel("openwebrx-panel-digimodes", false);
 }
 
 secondary_demod_fft_offset_db=30; //need to calculate that later
@@ -2647,7 +2652,7 @@ function secondary_demod_listbox_changed()
 function secondary_demod_listbox_update()
 {
     secondary_demod_listbox_updating = true;
-    $("#openwebrx-secondary-demod-listbox").val((secondary_demod)?secondary_demod:"none");
+    // $("#openwebrx-secondary-demod-listbox").val((secondary_demod)?secondary_demod:"none");
     console.log("update");
     secondary_demod_listbox_updating = false;
 }
