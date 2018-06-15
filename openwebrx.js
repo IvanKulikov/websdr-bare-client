@@ -1312,7 +1312,7 @@ function audio_init()
    audio_buffer = audio_context.createBuffer(xhr.response, false);
 	audio_source.buffer = buffer;
 	audio_source.noteOn(0);*/
-	demodulator_analog_replace("am");
+	demodulator_analog_replace("lsb");
 	demodulators[0].offset_frequency = -14406000;
 	demodulators[0].set();
 }

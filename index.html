@@ -31,6 +31,7 @@
 			ws.send("SET nb=0 th=50");
 			ws.send("SET agc=1 hang=0 thresh=0 slope=0 decay=0 manGain=0");
 			ws.send("SET agc=1 hang=0 thresh=-100 slope=0 decay=0 manGain=50");
+			ws.send("SET mod=lsb low_cut=-2700 high_cut=-300 freq=594.000");
 		}, 3000);
 	</script>
 </html>
