@@ -900,7 +900,6 @@ function demodulator_digital_replace(subtype)
         demodulator_analog_replace('usb', true);
         break;
     }
-    // toggle_panel("openwebrx-panel-digimodes", true);
 }
 
 function secondary_demod_create_canvas()
@@ -977,10 +976,18 @@ function secondary_demod_push_binary_data(x)
 function secondary_demod_close_window()
 {
     secondary_demod_stop();
-    // toggle_panel("openwebrx-panel-digimodes", false);
 }
 
 secondary_demod_fft_offset_db=30; //need to calculate that later
+
+function secondary_demod_listbox_update()
+{
+    secondary_demod_listbox_updating = true;
+    console.log("update");
+    secondary_demod_listbox_updating = false;
+}
+
+secondary_demod_channel_freq=1000;
 
 secondary_demod_waiting_for_set = false;
 function secondary_demod_update_channel_freq_from_event(evt)
