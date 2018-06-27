@@ -566,21 +566,20 @@ var audio_resampler;
 var audio_codec=new sdrjs.ImaAdpcm();
 var audio_compression="adpcm";
 var audio_node;
-//var audio_received_sample_rate = 48000;
 var audio_input_buffer_size;
 
 // Optimalise these if audio lags or is choppy:
 var audio_buffer_size;
-var audio_buffer_maximal_length_sec=3; //actual number of samples are calculated from sample rate
+var audio_buffer_maximal_length_sec=3; //actual number of samples are calculated from sample rate // 3
 var audio_buffer_decrease_to_on_overrun_sec=2.2;
-var audio_flush_interval_ms=500; //the interval in which audio_flush() is called
+var audio_flush_interval_ms=100; //the interval in which audio_flush() is called
 
 var audio_prepared_buffers = Array();
 var audio_rebuffer;
 var audio_last_output_buffer;
 var audio_last_output_offset = 0;
 var audio_buffering = false;
-var audio_buffering_fill_to=4; //on audio underrun we wait until this n*audio_buffer_size samples are present
+var audio_buffering_fill_to=3; //on audio underrun we wait until this n*audio_buffer_size samples are present
 								//tnx to the hint from HA3FLT, now we have about half the response time! (original value: 10)
 
 function gain_ff(gain_value,data) //great! solved clicking! will have to move to sdr.js
@@ -592,8 +591,8 @@ function gain_ff(gain_value,data) //great! solved clicking! will have to move to
 
 function audio_prepare(data)
 {
-	//audio_rebuffer.push(sdrjs.ConvertI16_F(data));//no resampling
-	//audio_rebuffer.push(audio_resampler.process(sdrjs.ConvertI16_F(data)));//resampling without ADPCM
+	// audio_rebuffer.push(sdrjs.ConvertI16_F(data));//no resampling
+	// audio_rebuffer.push(audio_resampler.process(sdrjs.ConvertI16_F(data)));//resampling without ADPCM
 	if(audio_compression=="none")
 		audio_rebuffer.push(audio_resampler.process(gain_ff(volume,sdrjs.ConvertI16_F(data))));//resampling without ADPCM
 	else if(audio_compression=="adpcm")
@@ -622,48 +621,6 @@ function audio_prepare_without_resampler(data)
 	if(audio_buffering && audio_prepared_buffers.length>audio_buffering_fill_to) audio_buffering=false;
 }
 
-function audio_prepare_old(data)
-{
-	//console.log("audio_prepare :: "+data.length.toString());
-	//console.log("data.len = "+data.length.toString());
-	var dopush=function()
-	{
-		console.log(audio_last_output_buffer);
-		audio_prepared_buffers.push(audio_last_output_buffer);
-		audio_last_output_offset=0;
-		audio_last_output_buffer=new Float32Array(audio_buffer_size);
-		audio_buffer_current_count_debug++;
-	};
-
-	var original_data_length=data.length;
-	var f32data=new Float32Array(data.length);
-	for(var i=0;i<data.length;i++) f32data[i]=data[i]/32768; //convert_i16_f
-	data=audio_resampler.process(f32data);
-	console.log(data,data.length,original_data_length);
-	if(data.length==0) return;
-	if(audio_last_output_offset+data.length<=audio_buffer_size)
-	{	//array fits into output buffer
-		for(var i=0;i<data.length;i++) audio_last_output_buffer[i+audio_last_output_offset]=data[i];
-		audio_last_output_offset+=data.length;
-		console.log("fits into; offset="+audio_last_output_offset.toString());
-		if(audio_last_output_offset==audio_buffer_size) dopush();
-	}
-	else
-	{	//array is larger than the remaining space in the output buffer
-		var copied=audio_buffer_size-audio_last_output_offset;
-		var remain=data.length-copied;
-		for(var i=0;i<audio_buffer_size-audio_last_output_offset;i++) //fill the remaining space in the output buffer
-			audio_last_output_buffer[i+audio_last_output_offset]=data[i];///32768;
-		dopush();//push the output buffer and create a new one
-		console.log("larger than; copied half: "+copied.toString()+", now at: "+audio_last_output_offset.toString());
-		for(var i=0;i<remain;i++) //copy the remaining input samples to the new output buffer
-			audio_last_output_buffer[i]=data[i+copied];///32768;
-		audio_last_output_offset+=remain;
-		console.log("larger than; remained: "+remain.toString()+", now at: "+audio_last_output_offset.toString());
-	}
-	if(audio_buffering && audio_prepared_buffers.length>audio_buffering_fill_to) audio_buffering=false;
-}
-
 if (!AudioBuffer.prototype.copyToChannel)
 { //Chrome 36 does not have it, Firefox does
 	AudioBuffer.prototype.copyToChannel=function(input,channel) //input is Float32Array
@@ -674,13 +631,10 @@ if (!AudioBuffer.prototype.copyToChannel)
 }
 
 function audio_onprocess(e)
-{
-	//console.log("audio onprocess");
-	
+{	
 	if(audio_buffering) 
 		return;
 	if(audio_prepared_buffers.length==0) { 
-		// audio_buffer_progressbar_update(); /*add_problem("audio underrun");*/ 
 		audio_buffering=true; 
 	}
 	else { 
@@ -702,12 +656,12 @@ function audio_flush()
 
 	if(we_have_more_than(audio_buffer_maximal_length_sec)) while(we_have_more_than(audio_buffer_decrease_to_on_overrun_sec))
 	{
-		// if(!flushed) audio_buffer_progressbar_update();
+		if(!flushed) audio_buffer_progressbar_update();
 		flushed=true;
 		audio_prepared_buffers.shift();
 	}
 	
-	//if(flushed) add_problem("audio overrun");
+	if(flushed) add_problem("audio overrun");
 }
 
 function webrx_set_param(what, value)
@@ -735,7 +689,7 @@ function parsehash()
 			{
 				console.log(parseInt(harr[1]));
 				console.log(center_freq);
-				starting_offset_frequency = -14406000; //parseInt(harr[1])-center_freq;
+				starting_offset_frequency = parseInt(harr[1])-center_freq; // -14406000; //parseInt(harr[1])-center_freq;
 			}
 		});
 
@@ -781,33 +735,20 @@ function audio_init()
 
 	if(audio_client_resampling_factor==0) return; //if failed to find a valid resampling factor...
 
-	audio_debug_time_start=(new Date()).getTime();
-	audio_debug_time_last_start=audio_debug_time_start;
-
 	//https://github.com/0xfe/experiments/blob/master/www/tone/js/sinewave.js
 	audio_initialized=1; // only tell on_ws_recv() not to call it again
 
 
 	//on Chrome v36, createJavaScriptNode has been replaced by createScriptProcessor
-	createjsnode_function = (audio_context.createJavaScriptNode == undefined)?audio_context.createScriptProcessor.bind(audio_context):audio_context.createJavaScriptNode.bind(audio_context);
+	createjsnode_function = (audio_context.createJavaScriptNode == undefined) 
+		? audio_context.createScriptProcessor.bind(audio_context) 
+		: audio_context.createJavaScriptNode.bind(audio_context);
 	audio_node = createjsnode_function(audio_buffer_size, 0, 1);
 	audio_node.onaudioprocess = audio_onprocess;
 	audio_node.connect(audio_context.destination);
-	// --- Resampling ---
-	//https://github.com/grantgalitz/XAudioJS/blob/master/XAudioServer.js
-	//audio_resampler = new Resampler(audio_received_sample_rate, audio_context.sampleRate, 1, audio_buffer_size, true);
-	//audio_input_buffer_size = audio_buffer_size*(audio_received_sample_rate/audio_context.sampleRate);
-	webrx_set_param("audio_rate",audio_context.sampleRate); //Don't try to resample //TODO remove this
 
-	window.setInterval(audio_flush,audio_flush_interval_ms);
+	window.setInterval(audio_flush, audio_flush_interval_ms);
 	divlog('Web Audio API succesfully initialized, sample rate: '+audio_context.sampleRate.toString()+ " sps");
-	/*audio_source=audio_context.createBufferSource();
-   audio_buffer = audio_context.createBuffer(xhr.response, false);
-	audio_source.buffer = buffer;
-	audio_source.noteOn(0);*/
-	demodulator_analog_replace("lsb");
-	demodulators[0].offset_frequency = -14406000;
-	demodulators[0].set();
 }
 
 function on_ws_closed()
@@ -849,24 +790,6 @@ function open_websocket(url)
 var rt = function (s,n) {return s.replace(/[a-zA-Z]/g,function(c){return String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+n)?c:c-26);});}
 var irt = function (s,n) {return s.replace(/[a-zA-Z]/g,function(c){return String.fromCharCode((c>="a"?97:65)<=(c=c.charCodeAt(0)-n)?c:c+26);});}
 var sendmail2 = function (s) { window.location.href="mailto:"+irt(s.replace("=",String.fromCharCode(0100)).replace("$","."),8); }
-
-var audio_debug_time_start=0;
-var audio_debug_time_last_start=0;
-
-function debug_audio()
-{
-	if(audio_debug_time_start==0) return; //audio_init has not been called
-	time_now=(new Date()).getTime();
-	audio_debug_time_since_last_call=(time_now-audio_debug_time_last_start)/1000;
-	audio_debug_time_last_start=time_now; //now
-	audio_debug_time_taken=(time_now-audio_debug_time_start)/1000;
-	kbps_mult=(audio_compression=="adpcm")?8:16;
-	var audio_speed_value=audio_buffer_current_size_debug*kbps_mult/audio_debug_time_since_last_call;
-	var audio_output_value=(audio_buffer_current_count_debug*audio_buffer_size)/audio_debug_time_taken;
-	var network_speed_value=debug_ws_data_received/audio_debug_time_taken;
-	audio_buffer_current_size_debug=0;
-	if(waterfall_measure_minmax) waterfall_measure_minmax_print();
-}
 
 function demodulator_analog_replace_last() { demodulator_analog_replace(last_analog_demodulator_subtype); }
 
